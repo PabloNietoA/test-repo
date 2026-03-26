@@ -1,4 +1,6 @@
 import sqlite3
+import html
+import bleach
 from flask import Flask, request, render_template, redirect, url_for, session
 
 app = Flask(__name__)
@@ -25,8 +27,8 @@ def index():
 
         query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
         print(f"[DEBUG] Query ejecutada: {query}")
-
-        cursor.execute(query)
+        #"SELECT * FROM users WHERE username = ? AND password = ?", (username, password)
+        cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
         user = cursor.fetchone()
         conn.close()
 
@@ -53,17 +55,24 @@ def comments():
 
         cursor.execute(
             "INSERT INTO comments (author, content) VALUES (?, ?)",
-            (author, content)
+            (html.escape(author), html.escape(content))
         )
         conn.commit()
 
     cursor.execute("SELECT * FROM comments")
     comments_list = cursor.fetchall()
     conn.close()
+    
+    sanitized_comments = [] 
+    for row in comments_list:
+        s_comment = {'id':row['id'], 'author':html.escape(row['author']), 'content':html.escape(row['content'])}
+        sanitized_comments.append(s_comment)
+    
 
+    
     return render_template(
         "comments.html",
-        comments=comments_list,
+        comments=sanitized_comments,
         username=session["username"]
     )
 
